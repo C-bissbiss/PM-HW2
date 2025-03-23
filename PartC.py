@@ -41,12 +41,24 @@ def load_dataset(skiprows, nrows=None, date_format='%Y%m', convert_annual=False)
         monthly_df.replace([-99.99, -999], np.nan, inplace=True)
         return monthly_df
 
+# Calculate momentum for each industry (rolling 12-month average return)
+def calculate_momentum(returns_df):
+    momentum_df = pd.DataFrame(index=returns_df.index)
+    
+    # Calculate momentum for each industry
+    for column in returns_df.columns:
+        # Calculate rolling 12-month average return (including current month)
+        momentum_df[f'{column}_momentum'] = returns_df[column].rolling(window=12, min_periods=1).mean()
+    
+    return momentum_df
+
 # Load all datasets 
 data_value = load_dataset(skiprows=11, nrows=1182)
 data_equal = load_dataset(skiprows=1197, nrows=1182)
 data_firms = load_dataset(skiprows=2587, nrows=1182)
 data_size = load_dataset(skiprows=3773, nrows=1182)
-monthly_ratio = load_dataset(skiprows=4959, nrows=99, date_format='%Y', convert_annual=True)
+ratio_value = load_dataset(skiprows=4959, nrows=99, date_format='%Y', convert_annual=True)
+ratio_equal = load_dataset(skiprows=5062, nrows=99, date_format='%Y', convert_annual=True)
 
 # Load the risk-free rate data
 data_rf = pd.read_csv('Factors_C.csv', skiprows=3, nrows=1182)
@@ -65,13 +77,40 @@ data_value.columns = data_value.columns.str.strip()
 data_equal.columns = data_equal.columns.str.strip()
 data_firms.columns = data_firms.columns.str.strip()
 data_size.columns = data_size.columns.str.strip()
-monthly_ratio.columns = monthly_ratio.columns.str.strip()
+ratio_value.columns = ratio_value.columns.str.strip()
+ratio_equal.columns = ratio_equal.columns.str.strip()
 data_rf.columns = data_rf.columns.str.strip()
+
+# Calculate momentum for value-weighted and equal-weighted returns
+value_momentum = calculate_momentum(data_value)
+equal_momentum = calculate_momentum(data_equal)
+
+# Rename momentum columns to distinguish value and equal weighted
+value_momentum.columns = [col + '_value' for col in value_momentum.columns]
+equal_momentum.columns = [col + '_equal' for col in equal_momentum.columns]
+
+# Calculate market capitalization for each industry (Market Cap = Average Firm Size × Number of Firms)
+market_cap = pd.DataFrame(index=data_size.index)
+
+# Get common industry columns between size and firms datasets
+common_industries = [col for col in data_size.columns if col in data_firms.columns]
+
+# Calculate market cap for each industry
+for industry in common_industries:
+    market_cap[f'{industry}_mktcap'] = data_size[industry] * data_firms[industry]
 
 # Merge all datasets into a single DataFrame
 data_combined = data_value.join(data_equal, lsuffix='_value', rsuffix='_equal')
 data_combined = data_combined.join(data_firms, rsuffix='_firms')
 data_combined = data_combined.join(data_size, rsuffix='_size')
-data_combined = data_combined.join(monthly_ratio, rsuffix='_ratio')
+data_combined = data_combined.join(ratio_value, rsuffix='_ratio')
+data_combined = data_combined.join(ratio_equal, rsuffix='_ratio')
 data_combined = data_combined.join(data_rf, rsuffix='_rf')
+
+# Add momentum data to the combined dataset
+data_combined = data_combined.join(value_momentum)
+data_combined = data_combined.join(equal_momentum)
+
+# Add market capitalization data to the combined dataset
+data_combined = data_combined.join(market_cap)
 
