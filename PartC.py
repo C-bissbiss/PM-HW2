@@ -130,4 +130,14 @@ monthly_ratios = monthly_ratios.set_index('Date')
 monthly_ratios = monthly_ratios.sort_index()
 
 
-print(monthly_ratios)
+# Print all the dataframes to check if they are loaded correctly
+print("Value-weighted returns:")
+print(data_value.head())
+print("\nEqual-weighted returns:")
+print(data_equal.head())
+print("\nNumber of firms:")
+print(data_firms.head())
+print("\nAverage firm size:")
+print(data_size.head())
+print("\nSum of BE / sum of ME (monthly):")
+print(monthly_ratios.head())
