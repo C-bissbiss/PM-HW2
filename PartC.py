@@ -114,3 +114,8 @@ data_combined = data_combined.join(equal_momentum)
 # Add market capitalization data to the combined dataset
 data_combined = data_combined.join(market_cap)
 
+
+# Standarize using z-score normalization for characteristics market cap, ratio, and momentum for value and equal weighted portfolios
+# For each month t, standardize each characteristic cross-sectionally to have zero mean and unit standard deviation across all stocks at date t
+
+
