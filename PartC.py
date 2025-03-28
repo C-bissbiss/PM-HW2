@@ -114,8 +114,53 @@ data_combined = data_combined.join(equal_momentum)
 # Add market capitalization data to the combined dataset
 data_combined = data_combined.join(market_cap)
 
+# Save the combined dataset to a CSV file
+data_combined.to_csv('combined_data.csv')
 
 # Standarize using z-score normalization for characteristics market cap, ratio, and momentum for value and equal weighted portfolios
 # For each month t, standardize each characteristic cross-sectionally to have zero mean and unit standard deviation across all stocks at date t
+def cross_sectional_standardize(df):
+    """
+    Perform cross-sectional standardization (z-score normalization) for specified characteristics.
+    
+    For each month t, standardizes specified columns to have zero mean and unit standard deviation 
+    across all stocks at that date.
+    
+    Parameters:
+    df (pd.DataFrame): Input DataFrame with characteristics to standardize
+    
+    Returns:
+    pd.DataFrame: DataFrame with standardized columns
+    """
+    # Create a copy of the DataFrame to avoid modifying the original
+    standardized_df = df.copy()
+    
+    # Columns to standardize
+    standardize_columns = [
+        col for col in df.columns 
+        if (col.endswith('_mktcap') and '_size' not in col) or 
+        col.endswith('_ratio_value') or 
+        col.endswith('_ratio_equal') or 
+        col.endswith('_momentum_value') or 
+        col.endswith('_momentum_equal')
+    ]
 
+    # Calculate the mean and standard deviation for each column across the rows (i.e., across stocks) for each month
+    for col in standardize_columns:
+        mean = standardized_df[col].mean()
+        std = standardized_df[col].std()
+        
+        # Avoid division by zero
+        if std != 0:
+            standardized_df[col] = (standardized_df[col] - mean) / std
+        else:
+            standardized_df[col] = 0  # If std is zero, set to zero (no variation)
+    for col in standardize_columns:
+        standardized_df[col] = standardized_df[col].fillna(0)
 
+    return standardized_df
+
+# Apply the standardization to the combined dataset
+data_combined = cross_sectional_standardize(data_combined)
+
+print(data_combined.head(50))
